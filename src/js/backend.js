@@ -53,9 +53,7 @@ async function detectMissingBands(path) {
         const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
 
         // remove any unintended files
-        images = images.filter(
-          (item) => item !== "Thumbs.db" && item.match(imgPattern)
-        );
+        images = images.filter((item) => item.match(imgPattern));
 
         let testList = [];
         // let endOfSubset = false;
@@ -157,9 +155,7 @@ async function detectMissingTargetsAndIrradiance(path) {
             const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
 
             // remove any unintended files
-            images = images.filter(
-              (item) => item !== "Thumbs.db" && item.match(imgPattern)
-            );
+            images = images.filter((item) => item.match(imgPattern));
 
             let testStart = performance.now() / 1000;
 
@@ -228,9 +224,9 @@ async function detectMissingTargetsAndIrradiance(path) {
                   // continue;
                 }
                 let testEnd = performance.now() / 1000;
-                console.log(
-                  `Time for ${img}: ${(testEnd - testStart).toFixed(2)} `
-                );
+                // console.log(
+                //   `Time for ${img}: ${(testEnd - testStart).toFixed(2)} `
+                // );
               },
               { concurrency: 500 }
             );
@@ -466,9 +462,7 @@ async function plotMap2(path) {
           const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
 
           // remove any unintended files
-          images = images.filter(
-            (item) => item !== "Thumbs.db" && item.match(imgPattern)
-          );
+          images = images.filter((item) => item.match(imgPattern));
 
           // get unique images capture IDs
           let uniqueCaptures = [
@@ -523,7 +517,7 @@ async function plotMap2(path) {
     console.log(`CURRENT DIR: ${currentScriptDirectory}`);
 
     // create temp directory
-    let TEMP_DIR = pathJs.join(__dirname, "helpers", "temp_files");
+    let TEMP_DIR = pathJs.join(__dirname, "..", "helpers", "temp_files");
     const pathExists = !!(await fs2.stat(TEMP_DIR).catch((e) => false));
     if (!pathExists) {
       await fs2.mkdir(TEMP_DIR);
@@ -561,11 +555,13 @@ async function plotMap2(path) {
       let RScript = pathJs.join(
         currentScriptDirectory,
         "..",
+        "..",
         "helpers",
         "map.R"
       );
       let RExe = pathJs.join(
         currentScriptDirectory,
+        "..",
         "..",
         "..",
         "R",

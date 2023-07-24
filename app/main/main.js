@@ -16,7 +16,7 @@ const { performance } = require("perf_hooks");
 const exifr = require("exifr");
 
 // import backend functions
-const backendFuncs = require("../../src/backend");
+const backendFuncs = require("../../src/js/backend");
 
 let mainWindow;
 var imageryPath = "";
@@ -61,7 +61,7 @@ function createWindow() {
       enableRemoteModule: false,
     },
   });
-  mainWindow.loadFile(pathJs.join(__dirname, "../../src", "index.html"));
+  mainWindow.loadFile(pathJs.join(__dirname, "../../src/html", "index.html"));
   mainWindow.on("closed", function () {
     mainWindow = null;
   });
