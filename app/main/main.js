@@ -16,7 +16,7 @@ const { performance } = require("perf_hooks");
 const exifr = require("exifr");
 
 // import backend functions
-const backendFuncs = require("../../src/js/backendNew");
+const backendFuncs = require("../../src/js/backend");
 const helpers = require("../../src/js/helpers");
 
 let mainWindow;

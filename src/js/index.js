@@ -100,14 +100,22 @@ document.getElementById("choose").addEventListener("click", async (event) => {
     spinner.appendChild(check);
     document.getElementById("processing").appendChild(spinner);
 
-    // Update processing status
-    document.getElementById("processingStatus").innerText = "Checking bands";
-
+    let readImageResult = "";
     let bandResult = "";
     let calibrationResult = "";
     let irradianceResult = "";
     let plotMapResult = "";
     let exif = "";
+
+    // Update processing status
+    document.getElementById("processingStatus").innerText =
+      "Reading image metadata";
+
+    // signal backend to start processing bands
+    readImageResult = await window.api.backendFunc("read");
+
+    // Update processing status
+    document.getElementById("processingStatus").innerText = "Checking bands";
 
     // signal backend to start processing bands
     bandResult = await window.api.backendFunc("bands");
@@ -118,6 +126,7 @@ document.getElementById("choose").addEventListener("click", async (event) => {
 
     // signal backend to start processing exif
     exif = await window.api.backendFunc("exif");
+    console.log(exif);
     calibrationResult = exif[0];
     irradianceResult = exif[1];
 
@@ -138,6 +147,7 @@ document.getElementById("choose").addEventListener("click", async (event) => {
     document.getElementById(
       "processingStatus"
     ).innerText = `Done — finished in ${(
+      parseFloat(readImageResult[readImageResult.length - 2]) +
       parseFloat(bandResult[bandResult.length - 2]) +
       parseFloat(calibrationResult[calibrationResult.length - 2]) +
       parseFloat(plotMapResult[plotMapResult.length - 2])

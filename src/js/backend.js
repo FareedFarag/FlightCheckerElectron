@@ -1,62 +1,232 @@
 "use strict";
 
 const pathJs = require("path");
-const fs2 = require("fs").promises;
+const fs = require("fs");
 const { performance } = require("perf_hooks");
 const exifr = require("exifr");
 const spawn = require("child_process").spawn;
 const glob = require("glob");
 const PromiseBB = require("bluebird");
+const { ipcMain } = require("electron");
 
-async function detectMissingBands(path) {
+const helpers = require("./helpers");
+
+var imageContainer = {};
+
+// Requiring module
+var process = require("process");
+
+async function getImages(userPath) {
+  const startTime = performance.now() / 1000;
+
+  try {
+    // Store SETS in array
+    const setPattern = /^[0-9][0-9][0-9][0-9]SET$/;
+    let setDirectories = await helpers.getDirectories(userPath);
+    setDirectories = setDirectories.filter((item) => item.match(setPattern));
+
+    // JSON to store image paths and metadata
+    imageContainer = {};
+
+    const metadataOptions = {
+      tiff: false,
+      xmp: true,
+      gps: false,
+    };
+
+    // Iterate through each SET
+    for (const SET of setDirectories) {
+      // create keys in image container for each SET
+      imageContainer[SET] = {};
+
+      const subsetPattern = /^[0-9][0-9][0-9]$/;
+      let subsetDirectories = await helpers.getDirectories(
+        pathJs.join(userPath, SET)
+      );
+
+      subsetDirectories = subsetDirectories.filter((item) =>
+        item.match(subsetPattern)
+      );
+
+      // store image files from all subsets in the specified SET
+      const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
+      for (const subset of subsetDirectories) {
+        // create keys in image container for each subset
+        imageContainer[SET][subset] = {};
+        imageContainer[SET][subset]["images"] = [];
+        imageContainer[SET][subset]["metadata"] = [];
+
+        let subsetImages = await fs.promises.readdir(
+          pathJs.join(userPath, SET, subset)
+        );
+        subsetImages = subsetImages.filter((item) => item.match(imgPattern));
+        // subsetImages.sort();
+        // let counter = 0;
+
+        // for (const img of subsetImages) {
+        //   let buffer = await fs.promises.readFile(
+        //     pathJs.join(userPath, SET, subset, img),
+        //     {
+        //       flag: "r",
+        //     }
+        //   );
+
+        //   /**
+        //     - Extract metadata twice: first for XMP, second for GPS
+        //     - The reason for not doing parsing all metadata at once is due to OOM issues.
+        //   **/
+        //   let metadata;
+        //   let metadataGPS;
+        //   try {
+        //     metadata = await exifr.parse(buffer, metadataOptions);
+        //   } catch {
+        //     metadata = {};
+        //   }
+
+        //   try {
+        //     metadataGPS = await exifr.gps(buffer);
+        //     if (Object.keys(metadata).length !== 0) {
+        //       // add gps to metadata object
+        //       metadata["latitude"] = metadataGPS["latitude"];
+        //       metadata["longitude"] = metadataGPS["longitude"];
+        //     }
+        //   } catch {
+        //     // metadataGPS = {};
+        //   }
+
+        //   imageContainer[SET][subset]["images"].push(img);
+        //   imageContainer[SET][subset]["metadata"].push(metadata);
+
+        //   if (counter % 10 == 0) {
+        //     const formatMemoryUsage = (data) =>
+        //       `${Math.round((data / 1024 / 1024) * 100) / 100} MB`;
+
+        //     const memoryData = process.memoryUsage();
+
+        //     const memoryUsage = {
+        //       rss: `${formatMemoryUsage(
+        //         memoryData.rss
+        //       )} -> Resident Set Size - total memory allocated for the process execution`,
+        //       heapTotal: `${formatMemoryUsage(
+        //         memoryData.heapTotal
+        //       )} -> total size of the allocated heap`,
+        //       heapUsed: `${formatMemoryUsage(
+        //         memoryData.heapUsed
+        //       )} -> actual memory used during the execution`,
+        //       external: `${formatMemoryUsage(
+        //         memoryData.external
+        //       )} -> V8 external memory`,
+        //       arrayBuffers: formatMemoryUsage(memoryData.arrayBuffers),
+        //     };
+
+        //     console.log(memoryUsage);
+        //   }
+        //   counter += 1;
+        // }
+
+        await PromiseBB.map(
+          subsetImages,
+          async (img) => {
+            const buffer = await fs.promises.readFile(
+              pathJs.join(userPath, SET, subset, img),
+              {
+                flag: "r",
+              }
+            );
+
+            let metadata;
+            let metadataGPS;
+            try {
+              metadata = await exifr.parse(buffer, metadataOptions);
+            } catch {
+              metadata = {};
+            }
+
+            try {
+              metadataGPS = await exifr.gps(buffer);
+              if (Object.keys(metadata).length !== 0) {
+                // add gps to metadata object
+                metadata["latitude"] = metadataGPS["latitude"];
+                metadata["longitude"] = metadataGPS["longitude"];
+              }
+            } catch {}
+
+            const formatMemoryUsage = (data) =>
+              `${Math.round((data / 1024 / 1024) * 100) / 100} MB`;
+
+            const memoryData = process.memoryUsage();
+
+            const memoryUsage = {
+              rss: `${formatMemoryUsage(
+                memoryData.rss
+              )} -> Resident Set Size - total memory allocated for the process execution`,
+              heapTotal: `${formatMemoryUsage(
+                memoryData.heapTotal
+              )} -> total size of the allocated heap`,
+              heapUsed: `${formatMemoryUsage(
+                memoryData.heapUsed
+              )} -> actual memory used during the execution`,
+              external: `${formatMemoryUsage(
+                memoryData.external
+              )} -> V8 external memory`,
+              arrayBuffers: formatMemoryUsage(memoryData.arrayBuffers),
+            };
+
+            console.log(memoryUsage);
+
+            imageContainer[SET][subset]["images"].push(img);
+            imageContainer[SET][subset]["metadata"].push(metadata);
+          },
+          { concurrency: 200 }
+        );
+
+        // sort images for each set due to parallelism
+        const x = imageContainer[SET][subset]["images"];
+        const y = imageContainer[SET][subset]["metadata"];
+
+        // map the arrays together
+        const combinedArray = x.map((name, index) => ({
+          name,
+          metadata: y[index],
+        }));
+
+        combinedArray.sort((a, b) => a.name.localeCompare(b.name));
+
+        // store the sorted values back to imageContainer
+        for (let i = 0; i < combinedArray.length; i++) {
+          imageContainer[SET][subset]["images"][i] = combinedArray[i].name;
+          imageContainer[SET][subset]["metadata"][i] =
+            combinedArray[i].metadata;
+        }
+      }
+    }
+
+    const endTime = performance.now() / 1000;
+    const totalTime = (endTime - startTime).toFixed(2);
+
+    return [totalTime, "success"];
+  } catch (err) {
+    console.error(err);
+    const endTime = performance.now() / 1000;
+    const totalTime = (endTime - startTime).toFixed(2);
+
+    return [totalTime, "fail"];
+  }
+}
+
+async function detectMissingBands() {
   let msgs = [];
   const startTime = performance.now() / 1000;
   try {
     let missingSet = false;
     let resultMsg = "success";
     let imgsCounter = 0;
-    let imagerySet = [];
-
-    const setDirectories = await getDirectories(path);
-
-    // Store SETS in array
-    for (const file of setDirectories) {
-      if (file.includes("SET")) {
-        imagerySet.push(file);
-      }
-    }
-
-    // Wrong Directory
-    if (imagerySet.length === 0) {
-      resultMsg = "wrongDir";
-      msgs.push(resultMsg);
-      return msgs;
-    }
 
     // Iterate through each SET
-    for (const set of imagerySet) {
-      let subsets = [];
-      const subsetDirectories = await getDirectories(pathJs.join(path, set));
-
-      for (const subFolder of subsetDirectories) {
-        const fileStats = await fs2.stat(pathJs.join(path, set, subFolder));
-        if (subFolder.includes("0") && fileStats.isDirectory()) {
-          subsets.push(subFolder);
-        }
-      }
-
-      // let imageNum = 0;
-
-      // Iterate through each subset
-      for (const subset of subsets) {
-        let images = await fs2.readdir(pathJs.join(path, set, subset));
-        const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
-
-        // remove any unintended files
-        images = images.filter((item) => item.match(imgPattern));
-
+    for (const SET of Object.keys(imageContainer)) {
+      for (const subset of Object.keys(imageContainer[SET])) {
+        let images = imageContainer[SET][subset]["images"];
         let testList = [];
-        // let endOfSubset = false;
 
         // Check if subset is empty
         if (images.length === 0) continue;
@@ -110,7 +280,7 @@ async function detectMissingBands(path) {
   return msgs;
 }
 
-async function detectMissingTargetsAndIrradiance(path) {
+async function detectMissingTargetsAndIrradiance(userPath) {
   // Targets & Irradiance Msgs
   let allMsgs = [];
 
@@ -135,250 +305,73 @@ async function detectMissingTargetsAndIrradiance(path) {
 
   const startTime = performance.now() / 1000;
   console.log(`START:  ${startTime}`);
-  // let totalTime;
   try {
     let resultMsg = "missing";
-    const setDirectories = await getDirectories(path);
 
     // Store SETS in array
-    for (const dir of setDirectories) {
-      if (dir.includes("SET")) {
-        const subsetDirectories = await getDirectories(pathJs.join(path, dir));
-        console.log(`SUB DIRS: ${subsetDirectories}`);
+    for (const SET of Object.keys(imageContainer)) {
+      for (const subset of Object.keys(imageContainer[SET])) {
+        let images = imageContainer[SET][subset]["images"];
+        let metadatas = imageContainer[SET][subset]["metadata"];
+        let index = 0;
 
-        for (const subset of subsetDirectories) {
-          if (subset.includes("0")) {
-            let images = await fs2.readdir(pathJs.join(path, dir, subset));
+        for (const metadata of metadatas) {
+          let img = images[index];
+          let irrandianceCounter = 0;
+          let exifTagPresent = false;
 
-            // sort array (reading from USB can lead to different order)
-            images.sort();
-            const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
+          // check if there is no metadata (corrupted img)
+          if (Object.keys(metadata).length === 0) {
+            console.log(`No metadata (corrupted): ${img}`);
+            warningMsgs.corrupted.push(pathJs.join(userPath, SET, subset, img));
 
-            // remove any unintended files
-            images = images.filter((item) => item.match(imgPattern));
-
-            let testStart = performance.now() / 1000;
-
-            await PromiseBB.map(
-              images,
-              async function (img) {
-                try {
-                  const buffer = await fs2.readFile(
-                    pathJs.join(path, dir, subset, img),
-                    { flag: "r" }
-                  );
-                  const metadata = await exifr.parse(buffer, true);
-
-                  let irrandianceCounter = 0;
-                  let exifTagPresent = false;
-
-                  for (const [key, value] of Object.entries(metadata)) {
-                    if (key.includes("Irradiance")) {
-                      irrandianceCounter += 1;
-                    } else if (key.includes("TriggerMethod")) {
-                      // Exif tag "TriggerMethod" found, set flag to true
-                      exifTagPresent = true;
-
-                      if (value == 0) {
-                        // check if set is complete
-                        const imgID = img.split("_")[1];
-                        const result = await checkCapture(
-                          pathJs.join(path, dir, subset),
-                          imgID,
-                          images
-                        );
-
-                        subMsgs.push(result);
-                      }
-                    }
-                  }
-
-                  // Check if TriggerMethod tag was present
-                  if (!exifTagPresent) {
-                    console.log(
-                      `No EXIF IMG: ${img}\n${Object.keys(metadata).length}`
-                    );
-                    warningMsgs.noExif.push(
-                      `Set: ${dir.split("SET")[0]} Img: ${imgID.split(".")[0]}`
-                    );
-                  }
-
-                  // Check if irradiance tags were present
-                  if (irrandianceCounter === 0) {
-                    irradianceMissingFound = true;
-                    const imgID = img.split("_")[1] + "_" + img.split("_")[2];
-                    irradianceMsgs.push(
-                      `Set: ${dir.split("SET")[0]} Img: ${
-                        imgID.split(".")[0]
-                      } has no sun irriadiance data`
-                    );
-                  }
-                } catch (err) {
-                  console.log(`Catched bad image: ${img}`);
-                  // const imgID = img.split("_")[1] + "_" + img.split("_")[2];
-                  warningMsgs.corrupted.push(
-                    // `Set: ${dir.split("SET")[0]} Img: ${imgID.split(".")[0]}`
-                    pathJs.join(path, dir, subset, img)
-                  );
-
-                  // continue;
-                }
-                let testEnd = performance.now() / 1000;
-                // console.log(
-                //   `Time for ${img}: ${(testEnd - testStart).toFixed(2)} `
-                // );
-              },
-              { concurrency: 500 }
-            );
-
-            // await Promise.all(
-            //   images.map(async (img) => {
-            //     try {
-            //       const buffer = await fs2.readFile(
-            //         pathJs.join(path, dir, subset, img),
-            //         { flag: "r" }
-            //       );
-            //       const metadata = await exifr.parse(buffer, true);
-
-            //       let irrandianceCounter = 0;
-            //       let exifTagPresent = false;
-
-            //       for (const [key, value] of Object.entries(metadata)) {
-            //         if (key.includes("Irradiance")) {
-            //           irrandianceCounter += 1;
-            //         } else if (key.includes("TriggerMethod")) {
-            //           // Exif tag "TriggerMethod" found, set flag to true
-            //           exifTagPresent = true;
-
-            //           if (value == 0) {
-            //             // check if set is complete
-            //             const imgID = img.split("_")[1];
-            //             const result = await checkCapture(
-            //               pathJs.join(path, dir, subset),
-            //               imgID,
-            //               images
-            //             );
-
-            //             subMsgs.push(result);
-            //           }
-            //         }
-            //       }
-
-            //       // Check if TriggerMethod tag was present
-            //       if (!exifTagPresent) {
-            //         console.log(
-            //           `No EXIF IMG: ${img}\n${Object.keys(metadata).length}`
-            //         );
-            //         warningMsgs.noExif.push(
-            //           `Set: ${dir.split("SET")[0]} Img: ${imgID.split(".")[0]}`
-            //         );
-            //       }
-
-            //       // Check if irradiance tags were present
-            //       if (irrandianceCounter === 0) {
-            //         irradianceMissingFound = true;
-            //         const imgID = img.split("_")[1] + "_" + img.split("_")[2];
-            //         irradianceMsgs.push(
-            //           `Set: ${dir.split("SET")[0]} Img: ${
-            //             imgID.split(".")[0]
-            //           } has no sun irriadiance data`
-            //         );
-            //       }
-            //     } catch (err) {
-            //       console.log(`Catched bad image: ${img}`);
-            //       // const imgID = img.split("_")[1] + "_" + img.split("_")[2];
-            //       warningMsgs.corrupted.push(
-            //         // `Set: ${dir.split("SET")[0]} Img: ${imgID.split(".")[0]}`
-            //         pathJs.join(path, dir, subset, img)
-            //       );
-
-            //       // continue;
-            //     }
-            //     let testEnd = performance.now() / 1000;
-            //     console.log(
-            //       `Time for ${img}: ${(testEnd - testStart).toFixed(2)} `
-            //     );
-            //   })
-            // );
-
-            // for (const img of images) {
-            //   let testStart = performance.now() / 1000;
-            //   try {
-            //     const buffer = await fs2.readFile(
-            //       pathJs.join(path, dir, subset, img),
-            //       { flag: "r" }
-            //     );
-            //     const metadata = await exifr.parse(buffer, true);
-
-            //     // if (Object.keys(metadata).length < 60) {
-            //     //   console.log(
-            //     //     `No EXIF IMG: ${img}\n${Object.keys(metadata).length}`
-            //     //   );
-            //     //   resultMsg = "no_exif";
-            //     //   subMsgs.push(resultMsg);
-            //     // }
-
-            //     let irrandianceCounter = 0;
-            //     let exifTagPresent = false;
-
-            //     for (const [key, value] of Object.entries(metadata)) {
-            //       if (key.includes("Irradiance")) {
-            //         irrandianceCounter += 1;
-            //       } else if (key.includes("TriggerMethod")) {
-            //         // Exif tag "TriggerMethod" found, set flag to true
-            //         exifTagPresent = true;
-
-            //         if (value == 0) {
-            //           // check if set is complete
-            //           const imgID = img.split("_")[1];
-            //           const result = await checkCapture(
-            //             pathJs.join(path, dir, subset),
-            //             imgID,
-            //             images
-            //           );
-
-            //           subMsgs.push(result);
-            //         }
-            //       }
-            //     }
-
-            //     // Check if TriggerMethod tag was present
-            //     if (!exifTagPresent) {
-            //       console.log(
-            //         `No EXIF IMG: ${img}\n${Object.keys(metadata).length}`
-            //       );
-            //       warningMsgs.noExif.push(
-            //         `Set: ${dir.split("SET")[0]} Img: ${imgID.split(".")[0]}`
-            //       );
-            //     }
-
-            //     // Check if irradiance tags were present
-            //     if (irrandianceCounter === 0) {
-            //       irradianceMissingFound = true;
-            //       const imgID = img.split("_")[1] + "_" + img.split("_")[2];
-            //       irradianceMsgs.push(
-            //         `Set: ${dir.split("SET")[0]} Img: ${
-            //           imgID.split(".")[0]
-            //         } has no sun irriadiance data`
-            //       );
-            //     }
-            //   } catch (err) {
-            //     console.log(`Catched bad image: ${img}`);
-            //     // const imgID = img.split("_")[1] + "_" + img.split("_")[2];
-            //     warningMsgs.corrupted.push(
-            //       // `Set: ${dir.split("SET")[0]} Img: ${imgID.split(".")[0]}`
-            //       pathJs.join(path, dir, subset, img)
-            //     );
-
-            //     continue;
-            //   }
-
-            //   let testEnd = performance.now() / 1000;
-            //   console.log(
-            //     `Time for ${img}: ${(testEnd - testStart).toFixed(2)} `
-            //   );
-            // }
+            continue;
           }
+
+          for (const [key, value] of Object.entries(metadata)) {
+            if (key.includes("Irradiance")) {
+              irrandianceCounter += 1;
+            } else if (key.includes("TriggerMethod")) {
+              // Exif tag "TriggerMethod" found, set flag to true
+              exifTagPresent = true;
+
+              if (value == 0) {
+                // check if set is complete
+                const imgID = img.split("_")[1];
+                console.log(userPath, SET, subset);
+                const result = await helpers.checkCapture(
+                  pathJs.join(userPath, SET, subset),
+                  imgID,
+                  images
+                );
+
+                subMsgs.push(result);
+              }
+            }
+          }
+
+          // Check if TriggerMethod tag was present
+          if (!exifTagPresent) {
+            console.log(`No EXIF IMG: ${img}\n${Object.keys(metadata).length}`);
+            warningMsgs.noExif.push(
+              `Set: ${SET.split("SET")[0]} Img: ${
+                img.split("_")[1].split(".")[0]
+              }`
+            );
+          }
+
+          // Check if irradiance tags were present
+          if (irrandianceCounter === 0) {
+            irradianceMissingFound = true;
+            const imgID = img.split("_")[1] + "_" + img.split("_")[2];
+            irradianceMsgs.push(
+              `Set: ${SET.split("SET")[0]} Img: ${
+                imgID.split(".")[0]
+              } has no sun irriadiance data`
+            );
+          }
+
+          index += 1;
         }
       }
     }
@@ -406,9 +399,7 @@ async function detectMissingTargetsAndIrradiance(path) {
     irradianceMsgs.push(irradianceResultMsg);
   } catch (err) {
     console.log(`EXCEPTION: ${err}\n${err.stack}`);
-    // console.log(`EXCEPTION:`);
-    // console.error(err.stack);
-    // console.log(err.stack.split("\n"));
+
     /**
      * Targets results (unexpected)
      */
@@ -430,7 +421,7 @@ async function detectMissingTargetsAndIrradiance(path) {
   return allMsgs;
 }
 
-async function plotMap2(path) {
+async function plotMap() {
   const startTime = performance.now() / 1000;
   let lats = [];
   let longs = [];
@@ -447,68 +438,43 @@ async function plotMap2(path) {
   // flag for missing gps
   let missingGPS = false;
 
-  const setDirectories = await getDirectories(path);
-
   // Store SETS in array
-  for (const dir of setDirectories) {
-    if (dir.includes("SET")) {
-      const subsetDirectories = await getDirectories(pathJs.join(path, dir));
-      for (const subset of subsetDirectories) {
-        if (subset.includes("0")) {
-          let images = await fs2.readdir(pathJs.join(path, dir, subset));
+  for (const SET of Object.keys(imageContainer)) {
+    for (const subset of Object.keys(imageContainer[SET])) {
+      let images = imageContainer[SET][subset]["images"];
+      let currentImgID;
+      let index = 0;
 
-          // sort array (reading from USB can lead to diff order)
-          images.sort();
-          const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
+      for (const img of images) {
+        let imgID = img.split("_")[1];
 
-          // remove any unintended files
-          images = images.filter((item) => item.match(imgPattern));
+        if (imgID != currentImgID) {
+          currentImgID = imgID;
+          const metadata = imageContainer[SET][subset]["metadata"][index];
 
-          // get unique images capture IDs
-          let uniqueCaptures = [
-            ...new Set(images.map((item) => item.split("_")[1])),
-          ];
-
-          for (const capture of uniqueCaptures) {
-            try {
-              // Pick any image from the capture for processing
-              let img = images.filter(
-                (item) => item.split("_")[1] === capture
-              )[0];
-
-              const buffer = await fs2.readFile(
-                pathJs.join(path, dir, subset, img),
-                { flag: "r" }
-              );
-
-              const metadata = await exifr.parse(buffer, true);
-              let missingGPSImg = false;
-
-              // for (const [key, value] of Object.entries(metadata)) {
-              //   if (key === "latitude" || key === "longitude") {
-              //     // check if img has GPS tag
-              //     if (value == "0") missingGPSImg = true;
-              //   }
-              // }
-
-              // Check if img has missing gps
-              if (metadata.latitude == "0" || metadata.longitude == "0") {
-                missingGPS = true;
-                console.log(`Skipping IMG: ${img}`);
-                break;
-              }
-
-              lats.push(metadata.latitude);
-              longs.push(metadata.longitude);
-            } catch (err) {
-              console.log("Catched bad image from PlotMap");
-              continue;
-            }
+          // check if there is no metadata (corrupted img)
+          if (Object.keys(metadata).length === 0) {
+            console.log(`No metadata (corrupted): ${img}`);
+            continue;
           }
+
+          // Check if img has missing gps
+          if (metadata.latitude == "0" || metadata.longitude == "0") {
+            missingGPS = true;
+            console.log(`Skipping IMG: ${img}`);
+            break;
+          }
+
+          lats.push(metadata.latitude);
+          longs.push(metadata.longitude);
         }
+
+        index += 1;
       }
     }
   }
+
+  // console.log(`Lat: ${lats.length}\nLong: ${longs.length}`);
 
   if (longs.length > 0 && lats.length > 0) {
     let gpsObj = { GPSLatitude: lats, GPSLongitude: longs };
@@ -518,9 +484,9 @@ async function plotMap2(path) {
 
     // create temp directory
     let TEMP_DIR = pathJs.join(__dirname, "..", "helpers", "temp_files");
-    const pathExists = !!(await fs2.stat(TEMP_DIR).catch((e) => false));
+    const pathExists = !!(await fs.promises.stat(TEMP_DIR).catch((e) => false));
     if (!pathExists) {
-      await fs2.mkdir(TEMP_DIR);
+      await fs.promises.mkdir(TEMP_DIR);
     }
 
     try {
@@ -531,7 +497,7 @@ async function plotMap2(path) {
       // Export gps coordinates as JSON
       while (true) {
         if (
-          !!(await fs2
+          !!(await fs.promises
             .stat(pathJs.join(TEMP_DIR, filename + ".json"))
             .catch((e) => false))
         ) {
@@ -541,7 +507,7 @@ async function plotMap2(path) {
 
         // file doesn't exist
         else {
-          await fs2.writeFile(
+          await fs.promises.writeFile(
             pathJs.join(TEMP_DIR, filename + ".json"),
             JSON.stringify(gpsObj),
             "utf-8"
@@ -614,7 +580,7 @@ async function plotMap2(path) {
       for (const jsonFile of globFiles) {
         try {
           console.log(`FILE TO DELETE: ${jsonFile}`);
-          await fs2.unlink(jsonFile);
+          await fs.promises.unlink(jsonFile);
         } catch (err) {
           console.log(`ERROR DELETING FILE: ${err}`);
           continue;
@@ -626,14 +592,11 @@ async function plotMap2(path) {
         let filenamePoints = returnValue.split("*")[1];
         let filenameLines = returnValue.split("*")[2].slice(0, -3);
 
-        let pointsBuf = await fs2.readFile(
+        let pointsBuf = await fs.promises.readFile(
           pathJs.join(TEMP_DIR, filenamePoints)
-          // { encoding: "base64" }
         );
-        // .toString("base64");
-        let linesBuf = await fs2.readFile(
+        let linesBuf = await fs.promises.readFile(
           pathJs.join(TEMP_DIR, filenameLines)
-          // { encoding: "base64" }
         );
 
         let fullPBuffer =
@@ -658,7 +621,7 @@ async function plotMap2(path) {
         for (const pngFile of globFilesPNG) {
           try {
             console.log(`FILE TO DELETE: ${pngFile}`);
-            await fs2.unlink(pngFile);
+            await fs.promises.unlink(pngFile);
           } catch (err) {
             console.log(`ERROR DELETING FILE: ${err}`);
             continue;
@@ -688,104 +651,23 @@ async function plotMap2(path) {
   return msgs;
 }
 
-async function validateDir(selectedPaths) {
-  // user cancelled popup
-  if (selectedPaths.canceled) {
-    // signal to enable browse button
-    console.log("returning");
-    return "enable";
-  }
+async function test() {
+  const path = "G:\\tests\\missing_bands";
+  let result = await getImages(path);
+  // console.log(imageContainer);
+  // console.log(imageContainer["0000SET"]["000"]["images"]);
+  console.log(await detectMissingBands());
 
-  // user selected a folder ... proceed
-  else {
-    /**
-     * check if directory is valid
-     **/
-    let imagerySet = [];
-    let resultMsg;
+  // await plotMap();
 
-    const directories = await getDirectories(selectedPaths.filePaths[0]);
-
-    // Store SETS in array
-    for (let set of directories) {
-      console.log(`DIR in selected path: ${set}`);
-      if (set.includes("SET")) {
-        imagerySet.push(set);
-      }
-    }
-
-    // wrong directory
-    if (imagerySet.length === 0) {
-      resultMsg = "wrongDir";
-    } else {
-      resultMsg = "success";
-    }
-
-    console.log(performance.now());
-
-    // signal main process for directory validity
-    return resultMsg;
-  }
+  // console.log(imageContainer["0000SET"]["001"]);
 }
-
-async function getDirectories(path) {
-  let directories = await fs2.readdir(path);
-
-  let filtered = await directories.reduce(async (acc, file) => {
-    const fileStats = await fs2.stat(pathJs.join(path, file));
-
-    // return list without file
-    if (!Boolean(fileStats.isDirectory())) {
-      return acc;
-    }
-
-    // Otherwise add this value to the list
-    return (await acc).concat(file);
-  }, []);
-
-  return filtered;
-}
-
-async function checkCapture(path, id, images) {
-  let capture = [];
-  let resultMsg = "";
-  // let images = await fs2.readdir(path);
-
-  // // remove any unintended files
-  // const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
-  // images = images.filter(
-  //   (item) => item !== "Thumbs.db" && item.match(imgPattern)
-  // );
-
-  for (const image of images) {
-    if (image.includes(id)) {
-      capture.push(image);
-    }
-  }
-
-  if (capture.length === 6) {
-    resultMsg = "complete";
-  } else {
-    resultMsg = "missing";
-  }
-
-  return resultMsg;
-}
-
-// async function test() {
-//   const path = "G:\\tests\\good";
-//   // console.log(imageContainer);
-//   await plotMap2(path);
-
-//   // console.log(imageContainer["0000SET"]["001"]);
-// }
 
 // test();
 
 module.exports = {
+  getImages,
   detectMissingBands,
   detectMissingTargetsAndIrradiance,
-  plotMap2,
-  getDirectories,
-  validateDir,
+  plotMap,
 };

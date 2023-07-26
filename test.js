@@ -6,7 +6,6 @@ const pathJs = require("path");
 const exifr = require("exifr");
 const { performance } = require("perf_hooks");
 const PromiseBB = require("bluebird");
-const exifp = require("exifreader");
 
 // async function promise() {
 //   const path = "G:\\tests\\no_gps+no_irradiance\\0000SET\\000";
