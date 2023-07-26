@@ -62,13 +62,6 @@ async function getDirectories(path) {
 async function checkCapture(path, id, images) {
   let capture = [];
   let resultMsg = "";
-  // let images = await fs.promises.readdir(path);
-
-  // // remove any unintended files
-  // const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
-  // images = images.filter(
-  //   (item) => item !== "Thumbs.db" && item.match(imgPattern)
-  // );
 
   for (const image of images) {
     if (image.includes(id)) {

@@ -772,6 +772,16 @@ async function checkCapture(path, id, images) {
   return resultMsg;
 }
 
+// async function test() {
+//   const path = "G:\\tests\\good";
+//   // console.log(imageContainer);
+//   await plotMap2(path);
+
+//   // console.log(imageContainer["0000SET"]["001"]);
+// }
+
+// test();
+
 module.exports = {
   detectMissingBands,
   detectMissingTargetsAndIrradiance,

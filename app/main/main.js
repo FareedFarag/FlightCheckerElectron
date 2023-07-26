@@ -16,7 +16,8 @@ const { performance } = require("perf_hooks");
 const exifr = require("exifr");
 
 // import backend functions
-const backendFuncs = require("../../src/js/backend");
+const backendFuncs = require("../../src/js/backendNew");
+const helpers = require("../../src/js/helpers");
 
 let mainWindow;
 var imageryPath = "";
@@ -97,7 +98,7 @@ ipcMain.handle("browseFolder", async (event, data) => {
   console.log(selectedPaths);
 
   // set global variable: imageryPath
-  const resultMsg = await backendFuncs.validateDir(selectedPaths);
+  const resultMsg = await helpers.validateDir(selectedPaths);
   if (resultMsg === "success") imageryPath = selectedPaths.filePaths[0];
 
   return resultMsg;
@@ -107,12 +108,14 @@ ipcMain.handle("browseFolder", async (event, data) => {
 ipcMain.handle("processing", async (event, data) => {
   console.log("Main.js received processing Signal");
 
-  if (data == "bands") {
-    return await backendFuncs.detectMissingBands(imageryPath);
+  if (data == "read") {
+    return await backendFuncs.getImages(imageryPath);
+  } else if (data == "bands") {
+    return await backendFuncs.detectMissingBands();
   } else if (data == "exif") {
     return await backendFuncs.detectMissingTargetsAndIrradiance(imageryPath);
   } else if (data == "plot") {
-    return await backendFuncs.plotMap2(imageryPath);
+    return await backendFuncs.plotMap();
   }
 });
 
