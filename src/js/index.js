@@ -1,13 +1,19 @@
 "use strict";
 
-var totalMissingBands = 0;
-var totalMissingIrradiance = 0;
+var totalMissingCapturesBands = [];
+var totalMissingCapturesIrradiance = [];
+
+document
+  .getElementById("documentationBtn")
+  .addEventListener("click", async (event) => {
+    await window.api.externalDoc();
+  });
 
 document.getElementById("choose").addEventListener("click", async (event) => {
   // clear any error messages if any
   const msg = document.querySelector(".danger-alert");
   if (msg !== null) {
-    console.log(msg);
+    // console.log(msg);
     msg.remove();
   }
 
@@ -26,7 +32,7 @@ document.getElementById("choose").addEventListener("click", async (event) => {
 
   // directory wrong
   else if (validDir === "wrongDir") {
-    console.log("calling addErrorMessage()");
+    // console.log("calling addErrorMessage()");
     addErrorMessage();
 
     // enable browse button
@@ -126,7 +132,7 @@ document.getElementById("choose").addEventListener("click", async (event) => {
 
     // signal backend to start processing exif
     exif = await window.api.backendFunc("exif");
-    console.log(exif);
+    // console.log(exif);
     calibrationResult = exif[0];
     irradianceResult = exif[1];
 
@@ -137,11 +143,11 @@ document.getElementById("choose").addEventListener("click", async (event) => {
     // signal backend to start processing plot function
     plotMapResult = await window.api.backendFunc("plot");
 
-    console.log("band result:", bandResult);
-    console.log("calibration result:", calibrationResult);
-    console.log("irradiance result:", irradianceResult);
-    console.log("plotMap result:", plotMapResult);
-    console.log("------------------------");
+    // console.log("band result:", bandResult);
+    // console.log("calibration result:", calibrationResult);
+    // console.log("irradiance result:", irradianceResult);
+    // console.log("plotMap result:", plotMapResult);
+    // console.log("------------------------");
 
     // Update processing status and spinner
     document.getElementById(
@@ -207,24 +213,25 @@ document.getElementById("choose").addEventListener("click", async (event) => {
     validatePlots(plotMapResult);
 
     /*************************************
-     * Check if missing Imgs > 5% (need to refly)
+     * Check if missing Imgs > 4% (need to refly)
      *************************************/
     if (
       bandResult[bandResult.length - 1] === "missing" ||
       irradianceResult[irradianceResult.length - 1] === "missing"
     ) {
-      const totalImgs = bandResult[bandResult.length - 3];
-      const totalMissingImgs = totalMissingBands + totalMissingIrradiance;
+      const totalCaptures = bandResult[bandResult.length - 3];
+      const totalMissingCaptures = [
+        ...new Set([
+          ...totalMissingCapturesBands,
+          ...totalMissingCapturesIrradiance,
+        ]),
+      ].length;
 
-      console.log(
-        `MIS BANDS: ${totalMissingBands}\n MIS IRR: ${totalMissingIrradiance} `
-      );
-
-      // check if more than threshold (doing 4% to be on the safe side)
-      if (totalMissingImgs > parseInt(0.04 * totalImgs)) {
+      // check if more than threshold (doing 4% [instead of Pix4dmapper's 5%] to be on the safe side)
+      if (totalMissingCaptures > parseInt(0.04 * totalCaptures)) {
         // add paragraph to refly
         const p = document.createElement("p");
-        p.innerText = `Too many missing bands detected. Please refly the field.`;
+        p.innerText = `Too many missing captures detected. Please refly the field.`;
         p.className = "missing";
         // p.style.color = "#e3a801";
         document.getElementById("refly").appendChild(p);
@@ -275,7 +282,7 @@ function validateBands(bandResult) {
       document.getElementById("bandResultsLimited").appendChild(p);
 
       // update missing counter
-      totalMissingBands += parseInt(bandResult[i][1]);
+      totalMissingCapturesBands.push(bandResult[i][2]);
     }
   }
 
@@ -315,12 +322,6 @@ function validateBands(bandResult) {
     p.className = "missing";
     p.innerText = "Unexpected error occured";
     document.getElementById("bandResultsLimited").appendChild(p);
-
-    console.log(
-      "unexpected Bands",
-      bandResult,
-      bandResult[bandResult.length - 1]
-    );
   }
 }
 
@@ -423,11 +424,6 @@ function validateTargets(calibrationResult) {
       // Case 6: Unexpected behaviour
       else if (unexpectedFlag) {
         message = "Unexpected error occured";
-        console.log(
-          "unexpected Calibration",
-          calibrationResult,
-          calibrationResult[calibrationResult.length - 1]
-        );
       }
       // Add a crossmark
       const crossmark = document.createElement("span");
@@ -501,7 +497,7 @@ function validateTargets(calibrationResult) {
           p.appendChild(imgSpan);
           p.appendChild(textNode);
 
-          console.log(p.childNodes);
+          // console.log(p.childNodes);
           warningsBox.appendChild(p);
 
           // add event listener to open image files
@@ -520,12 +516,6 @@ function validateTargets(calibrationResult) {
 
   // unexpected crash
   else {
-    console.log(
-      "unexpected Calibration",
-      calibrationResult,
-      calibrationResult[calibrationResult.length - 1]
-    );
-
     // Add a crossmark
     const crossmark = document.createElement("span");
     crossmark.className = "close-x";
@@ -582,22 +572,18 @@ function validateIrrandiance(irradianceResult) {
     for (let i = 0; i < irradianceResult.length - 2; i++) {
       let p = document.createElement("p");
       p.className = "missing";
-      p.innerText = irradianceResult[i];
+      p.innerText = irradianceResult[i][0];
       document.getElementById("irradianceResultsLimited").appendChild(p);
 
       // update missing counter
-      totalMissingIrradiance += 1;
+      // totalMissingIrradiance += 1;
+      totalMissingCapturesIrradiance.push(irradianceResult[i][1]);
     }
   }
 
   // Case 3: Unexpected behaviour
   else {
     const message = "Unexpected error occured";
-    console.log(
-      "unexpected Irradiance",
-      irradianceResult,
-      irradianceResult[irradianceResult.length - 1]
-    );
 
     // Add a crossmark
     const crossmark = document.createElement("span");
@@ -699,7 +685,7 @@ function addErrorMessage() {
   const parentNode = browseBtn.parentNode;
   document.getElementById("step_1").insertBefore(newDiv, browseBtn);
 
-  console.log("added error message");
+  // console.log("added error message");
 }
 
 async function fadeOut(node) {

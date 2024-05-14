@@ -1,206 +1,179 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
-    <meta charset="utf-8" />
-    <meta name="description" content="" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flight Checker</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
-    />
-    <!-- <link
+
+<head>
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
+  <meta charset="utf-8" />
+  <meta name="description" content="" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flight Checker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+  <!-- <link
       href="https://fonts.googleapis.com/css?family=Nunito+Sans:300,400,600,700,800,900"
       rel="stylesheet"
     /> -->
-    <!-- <link
+  <!-- <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/railscasts.min.css"
     /> -->
-    <link rel="stylesheet" href="../../assets/css/global.css" />
-    <link rel="stylesheet" href="../../assets/css/main.css" />
-    <!-- <link
+  <link rel="stylesheet" href="../../assets/css/global.css" />
+  <link rel="stylesheet" href="../../assets/css/main.css" />
+  <!-- <link
       rel="shortcut icon"
       type="image/x-icon"
       href="../../assets/icons/drone.ico"
     /> -->
-  </head>
+</head>
 
-  <body>
-    <div class="allButFooter">
-      <nav>
-        <div class="logo"></div>
-        <ul class="menu">
-          <div class="menu__item toggle"><span></span></div>
-          <li class="menu__item">
-            <a href="#" class="link link--dark"
-              ><i class="fa fa-book"></i> Documentation</a
-            >
-          </li>
-          <!-- <li class="menu__item">
+<body>
+  <div class="allButFooter">
+    <nav>
+      <div class="logo"></div>
+      <ul class="menu">
+        <div class="menu__item toggle"><span></span></div>
+        <li class="menu__item">
+          <a id="documentationBtn" href="#" class="link link--dark"><i class="fa fa-book"></i> Documentation</a>
+        </li>
+        <!-- <li class="menu__item">
             <a href="" class="link link--dark"
               ><i class="fa fa-github"></i> Github</a
             >
           </li> -->
-        </ul>
-      </nav>
-      <div class="hero">
-        <h1 class="hero__title">
-          <!-- <div> -->
-          <img
-            src="../../assets/imgs/Flight_Checker_1.jpg"
-            style="width: 40%; max-width: 70%"
-          />
-        </h1>
-        <p class="hero__description" style="font-weight: 200">
-          Validate your Drone Flight with Ease
+      </ul>
+    </nav>
+    <div class="hero">
+      <h1 class="hero__title">
+        <!-- <div> -->
+        <img src="../../assets/imgs/Flight_Checker_1.jpg" style="width: 40%; max-width: 70%" />
+      </h1>
+      <p class="hero__description" style="font-weight: 200">
+        Validate your Drone Flight with Ease
+      </p>
+    </div>
+
+    <div class="wrapper">
+      <div id="step_1" class="feature">
+        <div class="feature__item">
+          <h3 class="section__title">Imagery Directory</h3>
+          <p>Select the imagery directory (USB) that contains drone images</p>
+        </div>
+
+        <div id="chooseDiv" class="changelog__callout">
+          <a id="choose" class="button--secondary">Browse Folder</a>
+        </div>
+        <p id="result"></p>
+      </div>
+    </div>
+
+    <div id="processingContainer" class="wrapper_2">
+      <div class="feature">
+        <div class="feature__item">
+          <h3 class="section__title">Processing</h3>
+        </div>
+      </div>
+      <div id="processing" class="flex_column">
+        <p>
+          <span style="font-weight: bold">Status:</span>
+          <span id="processingStatus">Waiting on imagery directory</span>
         </p>
       </div>
+    </div>
 
-      <div class="wrapper">
-        <div id="step_1" class="feature">
-          <div class="feature__item">
-            <h3 class="section__title">Imagery Directory</h3>
-            <p>Select the imagery directory (USB) that contains drone images</p>
-          </div>
-
-          <div id="chooseDiv" class="changelog__callout">
-            <a id="choose" class="button--secondary">Browse Folder</a>
-          </div>
-          <p id="result"></p>
+    <div id="resultsContainer" class="wrapper" style="width: 90%">
+      <div id="step_3" class="feature">
+        <div class="feature__item">
+          <h3 class="section__title">Results</h3>
         </div>
-      </div>
 
-      <div id="processingContainer" class="wrapper_2">
-        <div class="feature">
-          <div class="feature__item">
-            <h3 class="section__title">Processing</h3>
+        <div class="flex_row">
+          <div id="bandResultsContainer" class="flex_column results">
+            <h3 style="text-align: center">Bands</h3>
+            <div id="bandResults" class="flex_column"></div>
+          </div>
+
+          <div id="calibrationResultsContainer" class="flex_column results">
+            <h3 style="text-align: center">Calibration Targets</h3>
+            <div id="calibrationResults" class="flex_column"></div>
+          </div>
+
+          <div id="irradianceResultsContainer" class="flex_column results">
+            <h3 style="text-align: center">Sun Irradiance</h3>
+            <div id="irradianceResults" class="flex_column"></div>
           </div>
         </div>
-        <div id="processing" class="flex_column">
-          <p>
-            <span style="font-weight: bold">Status:</span>
-            <span id="processingStatus">Waiting on imagery directory</span>
-          </p>
-        </div>
-      </div>
 
-      <div id="resultsContainer" class="wrapper" style="width: 90%">
-        <div id="step_3" class="feature">
-          <div class="feature__item">
-            <h3 class="section__title">Results</h3>
-          </div>
-
-          <div class="flex_row">
-            <div id="bandResultsContainer" class="flex_column results">
-              <h3 style="text-align: center">Bands</h3>
-              <div id="bandResults" class="flex_column"></div>
-            </div>
-
-            <div id="calibrationResultsContainer" class="flex_column results">
-              <h3 style="text-align: center">Calibration Targets</h3>
-              <div id="calibrationResults" class="flex_column"></div>
-            </div>
-
-            <div id="irradianceResultsContainer" class="flex_column results">
-              <h3 style="text-align: center">Sun Irradiance</h3>
-              <div id="irradianceResults" class="flex_column"></div>
-            </div>
-          </div>
-
-          <!-- <div class="results warningBox">
+        <!-- <div class="results warningBox">
             <h4 class="section__title warningHeader">Additional Warnings</h4>
           </div> -->
 
-          <div id="refly"></div>
+        <div id="refly"></div>
 
-          <div id="maps"></div>
+        <div id="maps"></div>
 
-          <div class="changelog__callout2 flexButtons">
-            <details class="changelog__callout">
-              <summary>
-                <div id="viewImage1" style="margin-right: 5px">
-                  <!-- <div class="button--secondary" style="pointer-events: auto;">View Flight Image</div> -->
-                </div>
-                <div class="details-modal-overlay"></div>
-              </summary>
-              <div class="details-modal">
-                <div class="details-modal-close">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      clip-rule="evenodd"
-                      d="M13.7071 1.70711C14.0976 1.31658 14.0976 0.683417 13.7071 0.292893C13.3166 -0.0976311 12.6834 -0.0976311 12.2929 0.292893L7 5.58579L1.70711 0.292893C1.31658 -0.0976311 0.683417 -0.0976311 0.292893 0.292893C-0.0976311 0.683417 -0.0976311 1.31658 0.292893 1.70711L5.58579 7L0.292893 12.2929C-0.0976311 12.6834 -0.0976311 13.3166 0.292893 13.7071C0.683417 14.0976 1.31658 14.0976 1.70711 13.7071L7 8.41421L12.2929 13.7071C12.6834 14.0976 13.3166 14.0976 13.7071 13.7071C14.0976 13.3166 14.0976 12.6834 13.7071 12.2929L8.41421 7L13.7071 1.70711Z"
-                      fill="black"
-                    />
-                  </svg>
-                </div>
-                <div class="details-modal-title">
-                  <h1 id="viewImageTitle1">Satellite Map — Points</h1>
-                </div>
-                <div id="viewImageContent1" class="details-modal-content"></div>
+        <div class="changelog__callout2 flexButtons">
+          <details class="changelog__callout">
+            <summary>
+              <div id="viewImage1" style="margin-right: 5px">
+                <!-- <div class="button--secondary" style="pointer-events: auto;">View Flight Image</div> -->
               </div>
-            </details>
-
-            <details class="changelog__callout">
-              <summary>
-                <div id="viewImage2" style="margin-left: 5px"></div>
-                <div class="details-modal-overlay"></div>
-              </summary>
-              <div class="details-modal">
-                <div class="details-modal-close">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      clip-rule="evenodd"
-                      d="M13.7071 1.70711C14.0976 1.31658 14.0976 0.683417 13.7071 0.292893C13.3166 -0.0976311 12.6834 -0.0976311 12.2929 0.292893L7 5.58579L1.70711 0.292893C1.31658 -0.0976311 0.683417 -0.0976311 0.292893 0.292893C-0.0976311 0.683417 -0.0976311 1.31658 0.292893 1.70711L5.58579 7L0.292893 12.2929C-0.0976311 12.6834 -0.0976311 13.3166 0.292893 13.7071C0.683417 14.0976 1.31658 14.0976 1.70711 13.7071L7 8.41421L12.2929 13.7071C12.6834 14.0976 13.3166 14.0976 13.7071 13.7071C14.0976 13.3166 14.0976 12.6834 13.7071 12.2929L8.41421 7L13.7071 1.70711Z"
-                      fill="black"
-                    />
-                  </svg>
-                </div>
-                <div class="details-modal-title">
-                  <h1 id="viewImageTitle2">Satellite Map — Lines</h1>
-                </div>
-                <div id="viewImageContent2" class="details-modal-content"></div>
+              <div class="details-modal-overlay"></div>
+            </summary>
+            <div class="details-modal">
+              <div class="details-modal-close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M13.7071 1.70711C14.0976 1.31658 14.0976 0.683417 13.7071 0.292893C13.3166 -0.0976311 12.6834 -0.0976311 12.2929 0.292893L7 5.58579L1.70711 0.292893C1.31658 -0.0976311 0.683417 -0.0976311 0.292893 0.292893C-0.0976311 0.683417 -0.0976311 1.31658 0.292893 1.70711L5.58579 7L0.292893 12.2929C-0.0976311 12.6834 -0.0976311 13.3166 0.292893 13.7071C0.683417 14.0976 1.31658 14.0976 1.70711 13.7071L7 8.41421L12.2929 13.7071C12.6834 14.0976 13.3166 14.0976 13.7071 13.7071C14.0976 13.3166 14.0976 12.6834 13.7071 12.2929L8.41421 7L13.7071 1.70711Z"
+                    fill="black" />
+                </svg>
               </div>
-            </details>
-          </div>
+              <div class="details-modal-title">
+                <h1 id="viewImageTitle1">Satellite Map — Points</h1>
+              </div>
+              <div id="viewImageContent1" class="details-modal-content"></div>
+            </div>
+          </details>
 
-          <!-- <div class="alert success-alert" style="padding-left: 40px;">
+          <details class="changelog__callout">
+            <summary>
+              <div id="viewImage2" style="margin-left: 5px"></div>
+              <div class="details-modal-overlay"></div>
+            </summary>
+            <div class="details-modal">
+              <div class="details-modal-close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M13.7071 1.70711C14.0976 1.31658 14.0976 0.683417 13.7071 0.292893C13.3166 -0.0976311 12.6834 -0.0976311 12.2929 0.292893L7 5.58579L1.70711 0.292893C1.31658 -0.0976311 0.683417 -0.0976311 0.292893 0.292893C-0.0976311 0.683417 -0.0976311 1.31658 0.292893 1.70711L5.58579 7L0.292893 12.2929C-0.0976311 12.6834 -0.0976311 13.3166 0.292893 13.7071C0.683417 14.0976 1.31658 14.0976 1.70711 13.7071L7 8.41421L12.2929 13.7071C12.6834 14.0976 13.3166 14.0976 13.7071 13.7071C14.0976 13.3166 14.0976 12.6834 13.7071 12.2929L8.41421 7L13.7071 1.70711Z"
+                    fill="black" />
+                </svg>
+              </div>
+              <div class="details-modal-title">
+                <h1 id="viewImageTitle2">Satellite Map — Lines</h1>
+              </div>
+              <div id="viewImageContent2" class="details-modal-content"></div>
+            </div>
+          </details>
+        </div>
+
+        <!-- <div class="alert success-alert" style="padding-left: 40px;">
           <h3>Final Message</h3>
         </div> -->
-        </div>
       </div>
+    </div>
 
-      <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script> -->
-      <!-- <script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script> -->
+    <!-- <script>
       hljs.initHighlightingOnLoad();
     </script> -->
-      <script src="../js/index.js"></script>
-      <script src="../js/template.js"></script>
-    </div>
-    <footer class="footer">
-      <p style="color: white">
-        <a
-          class="link link--light tooltiplink"
-          data-title="Email fareedayman03@gmail.com"
-          >Contact us</a
-        >
-        for bug reporting
-      </p>
-    </footer>
-  </body>
+    <script src="../js/index.js"></script>
+    <script src="../js/template.js"></script>
+  </div>
+  <footer class="footer">
+    <p style="color: white">
+      <a class="link link--light" href="mailto:fareedayman03@gmail.com">Contact us</a>
+      for bug reporting <br>
+      <span style="font-size: 15px;">fareedayman03@gmail.com</span>
+    </p>
+  </footer>
+</body>
+
 </html>

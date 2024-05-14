@@ -89,13 +89,13 @@ app.on("activate", function () {
 
 // Handle user directory selection
 ipcMain.handle("browseFolder", async (event, data) => {
-  console.log("Main.js received browseFolder Signal");
+  // console.log("Main.js received browseFolder Signal");
   imageryPath = "";
 
   const selectedPaths = await dialog.showOpenDialog({
     properties: ["openDirectory"],
   });
-  console.log(selectedPaths);
+  // console.log(selectedPaths);
 
   // set global variable: imageryPath
   const resultMsg = await helpers.validateDir(selectedPaths);
@@ -106,7 +106,7 @@ ipcMain.handle("browseFolder", async (event, data) => {
 
 // Handle backend functions
 ipcMain.handle("processing", async (event, data) => {
-  console.log("Main.js received processing Signal");
+  // console.log("Main.js received processing Signal");
 
   if (data == "read") {
     return await backendFuncs.getImages(imageryPath);
@@ -125,7 +125,18 @@ ipcMain.handle("openFile", (event, data) => {
     shell.showItemInFolder(data);
     return 1;
   } catch (err) {
-    console.log(`View file error catched: ${err}`);
+    // console.log(`View file error catched: ${err}`);
+    return 0;
+  }
+});
+
+// Handle documentation external link
+ipcMain.handle("externalDoc", (event) => {
+  try {
+    shell.openExternal("https://github.com/FareedFarag/FlightCheckerElectron");
+    return 1;
+  } catch (err) {
+    // console.log(`View file error catched: ${err}`);
     return 0;
   }
 });

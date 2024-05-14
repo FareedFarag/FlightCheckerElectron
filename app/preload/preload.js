@@ -14,6 +14,9 @@ const API = {
   openFile: (path) => {
     return ipcRenderer.invoke("openFile", path);
   },
+  externalDoc: () => {
+    return ipcRenderer.invoke("externalDoc");
+  },
 };
 
 contextBridge.exposeInMainWorld("api", API);

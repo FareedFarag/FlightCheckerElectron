@@ -7,7 +7,7 @@ async function validateDir(selectedPaths) {
   // user cancelled popup
   if (selectedPaths.canceled) {
     // signal to enable browse button
-    console.log("returning");
+    // console.log("returning");
     return "enable";
   }
 
@@ -23,7 +23,7 @@ async function validateDir(selectedPaths) {
 
     // Store SETS in array
     for (let set of directories) {
-      console.log(`DIR in selected path: ${set}`);
+      // console.log(`DIR in selected path: ${set}`);
       if (set.includes("SET")) {
         imagerySet.push(set);
       }
