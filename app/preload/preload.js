@@ -2,8 +2,6 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
-console.log("Hello from preload");
-
 const API = {
   browseFolder: () => {
     return ipcRenderer.invoke("browseFolder", "");

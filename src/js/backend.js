@@ -149,7 +149,6 @@ async function getImages(userPath) {
 }
 
 async function detectMissingBands() {
-  // [[missing sets], images count, total time, flag]
   // [[missing sets], set count, total time, flag]
   let msgs = [];
   const startTime = performance.now() / 1000;
@@ -492,80 +491,84 @@ async function plotMap() {
         });
 
         RProcess.stderr.on("data", (err) => {
-          // console.log("Error: " + String(err));
+          console.log("Error: " + String(err));
         });
 
         RProcess.on("close", (code) => {});
       });
 
-      // only extract main return value
-      returnValue = returnValue.split("!@#!")[1];
+      if (returnValue.includes("!@#!")) {
+        // only extract main return value
+        returnValue = returnValue.split("!@#!")[1];
 
-      // Delete temporary JSON file(s)
-      let globFiles;
-      await new Promise((resolve, reject) => {
-        glob(
-          pathJs
-            .join(TEMP_DIR, "FLIGHT_CHECKER_COORDINATES*.json")
-            .replace(/\\/g, "/"),
-          (err, files) => {
-            globFiles = files;
-            resolve(files);
-          }
-        );
-      });
-
-      for (const jsonFile of globFiles) {
-        try {
-          await fs.promises.unlink(jsonFile);
-        } catch (err) {
-          continue;
-        }
-      }
-
-      // Process R output
-      if (returnValue.includes("success")) {
-        let filenamePoints = returnValue.split("*")[1];
-        let filenameLines = returnValue.split("*")[2].slice(0, -3);
-
-        let pointsBuf = await fs.promises.readFile(
-          pathJs.join(TEMP_DIR, filenamePoints)
-        );
-        let linesBuf = await fs.promises.readFile(
-          pathJs.join(TEMP_DIR, filenameLines)
-        );
-
-        let fullPBuffer =
-          "data:image/png;base64," + pointsBuf.toString("base64");
-        let fullLBuffer =
-          "data:image/png;base64," + linesBuf.toString("base64");
-
-        // Delete temp PNG plots
-        let globFilesPNG;
+        // Delete temporary JSON file(s)
+        let globFiles;
         await new Promise((resolve, reject) => {
           glob(
             pathJs
-              .join(TEMP_DIR, "FLIGHT_CHECKER_IMAGES_PLOT*.png")
+              .join(TEMP_DIR, "FLIGHT_CHECKER_COORDINATES*.json")
               .replace(/\\/g, "/"),
             (err, files) => {
-              globFilesPNG = files;
+              globFiles = files;
               resolve(files);
             }
           );
         });
 
-        for (const pngFile of globFilesPNG) {
+        for (const jsonFile of globFiles) {
           try {
-            await fs.promises.unlink(pngFile);
+            await fs.promises.unlink(jsonFile);
           } catch (err) {
             continue;
           }
         }
 
-        msgs[0] = [fullPBuffer, fullLBuffer];
+        // Process R output
+        if (returnValue.includes("success")) {
+          let filenamePoints = returnValue.split("*")[1];
+          let filenameLines = returnValue.split("*")[2].slice(0, -3);
 
-        if (missingGPS) result_msg = "success_gps";
-        else result_msg = "success";
+          let pointsBuf = await fs.promises.readFile(
+            pathJs.join(TEMP_DIR, filenamePoints)
+          );
+          let linesBuf = await fs.promises.readFile(
+            pathJs.join(TEMP_DIR, filenameLines)
+          );
+
+          let fullPBuffer =
+            "data:image/png;base64," + pointsBuf.toString("base64");
+          let fullLBuffer =
+            "data:image/png;base64," + linesBuf.toString("base64");
+
+          // Delete temp PNG plots
+          let globFilesPNG;
+          await new Promise((resolve, reject) => {
+            glob(
+              pathJs
+                .join(TEMP_DIR, "FLIGHT_CHECKER_IMAGES_PLOT*.png")
+                .replace(/\\/g, "/"),
+              (err, files) => {
+                globFilesPNG = files;
+                resolve(files);
+              }
+            );
+          });
+
+          for (const pngFile of globFilesPNG) {
+            try {
+              await fs.promises.unlink(pngFile);
+            } catch (err) {
+              continue;
+            }
+          }
+
+          msgs[0] = [fullPBuffer, fullLBuffer];
+
+          if (missingGPS) result_msg = "success_gps";
+          else result_msg = "success";
+        } else {
+          result_msg = "fail_map";
+        }
       } else {
         result_msg = "fail_map";
       }
@@ -581,6 +584,8 @@ async function plotMap() {
   const endTime = performance.now() / 1000;
   const totalTime = (endTime - startTime).toFixed(2);
   msgs[2] = totalTime;
+
+  console.log(result_msg);
 
   return msgs;
 }

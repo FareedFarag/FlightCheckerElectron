@@ -32,8 +32,17 @@ document.getElementById("choose").addEventListener("click", async (event) => {
 
   // directory wrong
   else if (validDir === "wrongDir") {
-    // console.log("calling addErrorMessage()");
     addErrorMessage();
+
+    // enable browse button
+    document.querySelector("#choose").style.pointerEvents = "auto";
+
+    return;
+  }
+
+  // No images found
+  else if (validDir === "noImages") {
+    addErrorMessage("No images were found in the selected directory");
 
     // enable browse button
     document.querySelector("#choose").style.pointerEvents = "auto";
@@ -648,11 +657,10 @@ function validatePlots(plotMapResult) {
     let message;
     // Case 2: fail -- maps cant be created, could possibly be internet connection
     if (plotMapResult[plotMapResult.length - 1].includes("fail")) {
-      message = `Sorry, satellite maps can't be created. Please make sure your device is connected to the Internet \
-              and try again. If problem presists, please use Pix4dMapper in the meantime.`;
+      message = `Sorry, satellite maps can't be created. Please make sure that the directory contains all flight images and \
+      your device is connected to the Internet then try again.`;
     } else {
-      message = `Sorry, satellite maps can't be created due to an unexpected error. In the meantime, \ 
-              please use Pix4dMapper.`;
+      message = `Sorry, satellite maps can't be created due to an unexpected error.`;
     }
 
     const p = document.createElement("p");
@@ -662,7 +670,7 @@ function validatePlots(plotMapResult) {
   }
 }
 
-function addErrorMessage() {
+function addErrorMessage(message) {
   const newDiv = document.createElement("div");
   const newHeader = document.createElement("h3");
   const newAnchor = document.createElement("a");
@@ -670,7 +678,8 @@ function addErrorMessage() {
   newDiv.className = "alert danger-alert";
   newHeader.style.marginLeft = "10px";
   newHeader.style.fontSize = "1em";
-  newHeader.innerText = "Wrong Directory!";
+  if (message) newHeader.innerText = message;
+  else newHeader.innerText = "Wrong Directory!";
   newAnchor.className = "close";
   newAnchor.innerText = "x";
 

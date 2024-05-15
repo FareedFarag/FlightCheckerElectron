@@ -1,9 +1,9 @@
 /* nav specialized to landing page */
-.logo {
+/* .logo {
   background: url("dronen.jpg") no-repeat;
   background-size: contain;
   margin: 1rem 0 0 1rem;
-}
+} */
 
 nav {
   background-color: var(--bg-color);
@@ -603,7 +603,7 @@ button {
   position: absolute;
   right: 0;
   top: 0;
-  width: 4.5em;
+  width: 2.5em;
 }
 .details-modal-close:hover {
   cursor: pointer;
@@ -616,7 +616,7 @@ button {
   /* padding: 1.5em 2em; */
   pointer-events: all;
   position: relative;
-  width: calc(100% - 4.5em);
+  width: calc(100% - 2.5em);
 }
 .details-modal .details-modal-title h1 {
   font-size: 1.25rem;
