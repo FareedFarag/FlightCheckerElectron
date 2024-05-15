@@ -18,48 +18,55 @@ async function validateDir(selectedPaths) {
      **/
     let imagerySet = [];
     let resultMsg;
+    const pathExists = !!(await fs.promises
+      .stat(selectedPaths.filePaths[0])
+      .catch((e) => false));
 
-    const directories = await getDirectories(selectedPaths.filePaths[0]);
-    let imageryCount = 0;
-    let foundImages = false;
-    const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
+    if (pathExists) {
+      const directories = await getDirectories(selectedPaths.filePaths[0]);
+      let imageryCount = 0;
+      let foundImages = false;
+      const imgPattern = /^IMG_[0-9][0-9][0-9][0-9]_[1-6].tif$/;
 
-    // Store SETS in array
-    for (let set of directories) {
-      // console.log(`DIR in selected path: ${set}`);
-      if (set.includes("SET")) {
-        imagerySet.push(set);
+      // Store SETS in array
+      for (let set of directories) {
+        // console.log(`DIR in selected path: ${set}`);
+        if (set.includes("SET")) {
+          imagerySet.push(set);
 
-        if (!foundImages) {
-          const subsets = await getDirectories(
-            pathJs.join(selectedPaths.filePaths[0], set)
-          );
-
-          for (const subset of subsets) {
-            let subsetImages = await fs.promises.readdir(
-              pathJs.join(selectedPaths.filePaths[0], set, subset)
+          if (!foundImages) {
+            const subsets = await getDirectories(
+              pathJs.join(selectedPaths.filePaths[0], set)
             );
-            subsetImages = subsetImages.filter((item) =>
-              item.match(imgPattern)
-            );
-            imageryCount += subsetImages.length;
 
-            if (imageryCount > 0) {
-              foundImages = true;
-              break;
+            for (const subset of subsets) {
+              let subsetImages = await fs.promises.readdir(
+                pathJs.join(selectedPaths.filePaths[0], set, subset)
+              );
+              subsetImages = subsetImages.filter((item) =>
+                item.match(imgPattern)
+              );
+              imageryCount += subsetImages.length;
+
+              if (imageryCount > 0) {
+                foundImages = true;
+                break;
+              }
             }
           }
         }
       }
-    }
 
-    // wrong directory
-    if (imagerySet.length === 0) {
-      resultMsg = "wrongDir";
-    } else if (imageryCount === 0) {
-      resultMsg = "noImages";
+      // wrong directory
+      if (imagerySet.length === 0) {
+        resultMsg = "wrongDir";
+      } else if (imageryCount === 0) {
+        resultMsg = "noImages";
+      } else {
+        resultMsg = "success";
+      }
     } else {
-      resultMsg = "success";
+      resultMsg = `noDir!@#!${selectedPaths.filePaths[0]}`;
     }
 
     // signal main process for directory validity

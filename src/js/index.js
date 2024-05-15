@@ -50,6 +50,16 @@ document.getElementById("choose").addEventListener("click", async (event) => {
     return;
   }
 
+  // No images found
+  else if (validDir.includes("noDir")) {
+    addErrorMessage(`Directory ${validDir.split("!@#!")[1]} doesn't exist`);
+
+    // enable browse button
+    document.querySelector("#choose").style.pointerEvents = "auto";
+
+    return;
+  }
+
   // directory is valid, proceed with processing
   else if (validDir === "success") {
     /*************************************
