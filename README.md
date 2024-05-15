@@ -4,7 +4,7 @@ This repository contains the source code for the Flight Checker desktop app, wri
 
 ## Installation
 
-Coming soon
+Download the latest exe from [here](https://github.com/FareedFarag/FlightCheckerElectron/releases/tag/v1.0.0)
 
 ## Features
 
