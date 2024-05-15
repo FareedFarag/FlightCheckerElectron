@@ -55,6 +55,8 @@ document.getElementById("choose").addEventListener("click", async (event) => {
     /*************************************
      * clear previous results if any
      *************************************/
+    totalMissingCapturesBands = [];
+    totalMissingCapturesIrradiance = [];
 
     // update status
     document.getElementById("processingStatus").innerText =
@@ -235,6 +237,11 @@ document.getElementById("choose").addEventListener("click", async (event) => {
           ...totalMissingCapturesIrradiance,
         ]),
       ].length;
+
+      // console.log(totalCaptures);
+      // console.log(totalMissingCaptures);
+      // console.log(totalMissingCapturesBands);
+      // console.log(totalMissingCapturesIrradiance);
 
       // check if more than threshold (doing 4% [instead of Pix4dmapper's 5%] to be on the safe side)
       if (totalMissingCaptures > parseInt(0.04 * totalCaptures)) {

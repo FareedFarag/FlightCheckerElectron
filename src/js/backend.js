@@ -427,7 +427,9 @@ async function plotMap() {
     const currentScriptDirectory = __filename;
 
     // create temp directory
-    let TEMP_DIR = pathJs.join(__dirname, "..", "helpers", "temp_files");
+    // let TEMP_DIR = pathJs.join(__dirname, "..", "helpers", "temp_files");
+    let TEMP_DIR = pathJs.join(__dirname, "..", "..", "..", "temp_files");
+    // let TEMP_DIR = pathJs.join(__dirname, "..", "..", "temp_files");
     const pathExists = !!(await fs.promises.stat(TEMP_DIR).catch((e) => false));
     if (!pathExists) {
       await fs.promises.mkdir(TEMP_DIR);
@@ -462,15 +464,27 @@ async function plotMap() {
         }
       }
 
-      let RScript = pathJs.join(
-        currentScriptDirectory,
-        "..",
-        "..",
-        "helpers",
-        "map.R"
-      );
+      // let RScript = pathJs.join(
+      //   currentScriptDirectory,
+      //   "..",
+      //   "..",
+      //   "helpers",
+      //   "map.R"
+      // );
+      let RScript = pathJs.join(__dirname, "..", "..", "..", "map.R");
+      // let RScript = pathJs.join(__dirname, "..", "..", "map.R");
+      // let RExe = pathJs.join(
+      //   currentScriptDirectory,
+      //   "..",
+      //   "..",
+      //   "..",
+      //   "R",
+      //   "R-4.2.1",
+      //   "bin",
+      //   "Rscript.exe"
+      // );
       let RExe = pathJs.join(
-        currentScriptDirectory,
+        __dirname,
         "..",
         "..",
         "..",
@@ -486,6 +500,7 @@ async function plotMap() {
         const RProcess = spawn(RExe, [RScript, gpsJSONPath, "--vanilla"]);
 
         RProcess.stdout.on("data", (data) => {
+          // console.log("incoming: ", data.toString());
           returnValue += data.toString();
           resolve(returnValue);
         });
@@ -496,6 +511,8 @@ async function plotMap() {
 
         RProcess.on("close", (code) => {});
       });
+
+      // console.log(returnValue);
 
       if (returnValue.includes("!@#!")) {
         // only extract main return value
@@ -570,6 +587,7 @@ async function plotMap() {
           result_msg = "fail_map";
         }
       } else {
+        // console.log(returnValue);
         result_msg = "fail_map";
       }
     } catch (err) {
@@ -584,8 +602,6 @@ async function plotMap() {
   const endTime = performance.now() / 1000;
   const totalTime = (endTime - startTime).toFixed(2);
   msgs[2] = totalTime;
-
-  console.log(result_msg);
 
   return msgs;
 }
