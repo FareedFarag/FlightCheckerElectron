@@ -1,3 +1,4 @@
+![logo](assets/imgs/Flight_Checker_1.jpg)
 # Flight Checker
 
 This repository contains the source code for the Flight Checker desktop app, written with Electron.js framework.
